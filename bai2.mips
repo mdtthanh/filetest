@@ -1,0 +1,123 @@
+CHECK_EXIT:
+	addi 	$a0, $t0, 0 	# a0 = t0
+	sub 	$t0, $t0, 32
+	
+	jal 	FUNC_check_exit	
+	
+	bne 	$v1, 1, ELSE	# if (ckeck_exit == false) -> loop
+				# else exit
+	li 	$v0, 10
+	syscall
+ELSE:
+
+	
+ShowKey: 
+	sw $t0, 0($s0) # show key
+ nop 
+ 
+ j loop
+
+.eqv KEY_CODE 0xFFFF0004 		# ASCII code from keyboard, 1 byte
+.eqv KEY_READY 0xFFFF0000 		# =1 if has a new keycode ?
+ 					# Auto clear after lw
+.eqv DISPLAY_CODE 0xFFFF000C  		# ASCII code to show, 1 byte
+.eqv DISPLAY_READY 0xFFFF0008 		# =1 if the display has already to do
+ 					# Auto clear after sw
+.text
+ 		li $k0, KEY_CODE
+ 		li $k1, KEY_READY
+ 
+ 		li $s0, DISPLAY_CODE
+ 		li $s1, DISPLAY_READY
+ 		li $t6, 0
+loop: 		nop
+ 
+WaitForKey: 	lw $t1, 0($k1) 		# $t1 = [$k1] = KEY_READY
+ 		beq $t1, $zero, WaitForKey	# if $t1 == 0 then Polling
+ 
+
+ReadKey: 	lw $t0, 0($k0) 		# $t0 = [$k0] = KEY_CODE
+		
+		sgt 	$t1, $t0, 96 	# nếu mã ascii lớn hơn 96					
+		slti	$t2, $t0, 123	# nếu mã ascii nhỏ hơn 121
+		slt	$t3, $t1, $t2 
+				
+next:		
+		beq	$t3, $zero, setUPPER
+				
+		sgt  	$t1, $t0, 64 	# nếu mã ascii lớn hơn 64					
+		slti	$t2, $t0, 91	# nếu mã ascii nhỏ hơn 97
+		slt	$t3, $t1, $t2 
+		beq 	$t3, $zero, setLower
+		
+		sgt  	$t1, $t0, 47 	# nếu mã ascii lớn hơn 47					
+		slti	$t2, $t0, 58	# nếu mã ascii nhỏ hơn 58
+		slt	$t3, $t1, $t2 
+		beq 	$t3, $zero, WaitForDis
+		
+		li 	$t0, 42
+		j 	WaitForDis	
+	
+setUPPER:
+		addi	$t0, $t0, -32
+		j WaitForDis
+setLower:	
+		addi	$t0, $t0, 32
+		j WaitForDis
+Check:		
+		beq	$t0, 101, CHECK_EXIT
+		beq	$t0, 105, CHECK_EXIT
+		beq	$t0, 120, CHECK_EXIT
+		beq	$t0, 116, CHECK_EXIT 
+		sub 	$t0, $t0, 32
+		j 	ELSE
+CHECK_EXIT:
+		addi 	$a0, $t0, 0 	# a0 = t0
+		sub 	$t0, $t0, 32
+	
+		jal 	Func_check	
+	
+		bne 	$v1, 1, ELSE	# if (ckeck_exit == false) -> loop
+				# else exit
+		li 	$v0, 10
+		syscall
+
+
+WaitForDis: 	lw $t2, 0($s1) 		# $t2 = [$s1] = DISPLAY_READY
+ 		beq $t2, $zero, WaitForDis # if $t2 == 0 then Polling 
+ 		
+ELSE:
+#Encrypt: 	addi $t0, $t0, 0 	# change input key
+ShowKey: 	sw $t0, 0($s0) 		# show key
+ 		nop 
+ 
+ 		j loop		
+ 	
+Func_check:			
+	bne	$a0, 101, else_if_1		#if (a0 == 'e') s2 = 1
+	addi 	$s2, $zero, 1			
+	
+	jr 	$ra
+else_if_1:
+	bne 	$a0, 120, else_if_2		# if (a0 == 'x')	
+	bne 	$s2, 1, else_if_4		# if (s2 != 1) -> reset s2
+						# else set s2 = 2
+	addi 	$s2, $zero, 2
+	
+	jr 	$ra
+else_if_2:
+	bne 	$a0, 105, else_if_3		# if (a0 == 'i')
+	bne 	$s2, 2, else_if_4		# if (s2 != 2) -> reset s2
+						# else set s2 = 3
+	addi 	$s2, $zero, 3
+	
+	jr 	$ra
+else_if_3:
+	bne 	$s2, 3, else_if_4		# if (s2 != 3) -> reset s2
+						# else return check_exit = true
+	li 	$v1, 1
+	jr 	$ra
+else_if_4:
+	addi 	$s2, $zero, 0
+	jr 	$ra
+end_check:
